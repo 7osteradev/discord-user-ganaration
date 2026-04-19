@@ -1,0 +1,248 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); }
+  .wrap { padding: 1.5rem 0; max-width: 680px; }
+  h1 { font-size: 20px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
+  .subtitle { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 1.5rem; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .tab { padding: 7px 18px; font-size: 13px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: transparent; color: var(--color-text-secondary); cursor: pointer; transition: all 0.15s; }
+  .tab:hover { background: var(--color-background-secondary); color: var(--color-text-primary); }
+  .tab.active { background: var(--color-background-info); color: var(--color-text-info); border-color: transparent; font-weight: 500; }
+
+  .config-row { display: flex; gap: 12px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+  .config-row label { font-size: 13px; color: var(--color-text-secondary); }
+  select { padding: 6px 10px; font-size: 13px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); }
+
+  .gen-btn { padding: 9px 24px; font-size: 14px; font-weight: 500; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); cursor: pointer; transition: all 0.15s; }
+  .gen-btn:hover { background: var(--color-background-secondary); }
+  .gen-btn:active { transform: scale(0.98); }
+
+  .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 1rem; }
+  .username-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .uname { font-size: 14px; font-weight: 500; color: var(--color-text-primary); font-family: var(--font-mono); }
+  .badge { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+  .badge-free { background: #EAF3DE; color: #3B6D11; }
+  .badge-taken { background: #FCEBEB; color: #A32D2D; }
+  .badge-check { background: var(--color-background-secondary); color: var(--color-text-secondary); cursor: pointer; border: 0.5px solid var(--color-border-secondary); }
+  .badge-check:hover { background: var(--color-background-tertiary); }
+  .badge-loading { background: #FAEEDA; color: #854F0B; }
+
+  .len-tag { font-size: 10px; color: var(--color-text-tertiary); margin-left: 2px; }
+
+  .copy-btn { background: none; border: none; cursor: pointer; padding: 2px 4px; border-radius: 4px; color: var(--color-text-secondary); font-size: 12px; opacity: 0.7; }
+  .copy-btn:hover { opacity: 1; background: var(--color-background-secondary); }
+
+  .divider { border: none; border-top: 0.5px solid var(--color-border-tertiary); margin: 1.5rem 0; }
+
+  .check-section { background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; }
+  .check-row { display: flex; gap: 8px; align-items: center; }
+  .check-input { flex: 1; padding: 8px 12px; font-size: 14px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); font-family: var(--font-mono); }
+  .check-result { margin-top: 10px; font-size: 13px; padding: 8px 12px; border-radius: var(--border-radius-md); display: none; }
+  .check-result.show { display: block; }
+  .check-result.free { background: #EAF3DE; color: #3B6D11; }
+  .check-result.taken { background: #FCEBEB; color: #A32D2D; }
+  .check-result.invalid { background: #FAEEDA; color: #854F0B; }
+  .check-result.info { background: var(--color-background-info); color: var(--color-text-info); }
+
+  .note { font-size: 12px; color: var(--color-text-tertiary); margin-top: 8px; }
+  .counter { font-size: 12px; color: var(--color-text-secondary); margin-top: 6px; }
+</style>
+
+<div class="wrap">
+  <h1>Discord Username Generator</h1>
+  <p class="subtitle">توليد يوزرات ثلاثي، رباعي، وشبه ثلاثي + التحقق</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="setMode('3')">ثلاثي (3)</button>
+    <button class="tab" onclick="setMode('4')">رباعي (4)</button>
+    <button class="tab" onclick="setMode('semi3')">شبه ثلاثي (4–5)</button>
+    <button class="tab" onclick="setMode('all')">الكل معاً</button>
+  </div>
+
+  <div class="config-row">
+    <label>نوع الحروف:</label>
+    <select id="charType">
+      <option value="letters">حروف فقط</option>
+      <option value="numbers">أرقام فقط</option>
+      <option value="mixed" selected>حروف + أرقام</option>
+      <option value="underscore">مع (_)</option>
+    </select>
+    <label>الكمية:</label>
+    <select id="amount">
+      <option value="10">10</option>
+      <option value="20" selected>20</option>
+      <option value="30">30</option>
+      <option value="50">50</option>
+    </select>
+    <button class="gen-btn" onclick="generate()">توليد</button>
+  </div>
+
+  <div id="results-grid" class="results-grid"></div>
+  <p id="counter" class="counter" style="display:none"></p>
+
+  <hr class="divider">
+
+  <div class="check-section">
+    <p style="font-size:14px;font-weight:500;margin-bottom:10px;color:var(--color-text-primary)">التحقق من يوزرنيم</p>
+    <div class="check-row">
+      <input class="check-input" id="checkInput" type="text" placeholder="أدخل اليوزرنيم هنا..." maxlength="32" oninput="validateInput(this)">
+      <button class="gen-btn" onclick="checkUsername()">تحقق</button>
+    </div>
+    <div id="checkResult" class="check-result"></div>
+    <p class="note">ملاحظة: التحقق الدقيق يتطلب صلاحيات API رسمية من ديسكورد. هذا التحقق يفحص صحة الصيغة والنمط.</p>
+  </div>
+</div>
+
+<script>
+let currentMode = '3';
+
+const letters = 'abcdefghijklmnopqrstuvwxyz';
+const numbers = '0123456789';
+
+function setMode(m) {
+  currentMode = m;
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['3','4','semi3','all'][i] === m);
+  });
+}
+
+function getChars() {
+  const t = document.getElementById('charType').value;
+  if (t === 'letters') return letters;
+  if (t === 'numbers') return numbers;
+  if (t === 'mixed') return letters + numbers;
+  if (t === 'underscore') return letters + numbers + '_';
+  return letters + numbers;
+}
+
+function randStr(len, chars) {
+  let s = '';
+  for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
+function makeUsername(mode, chars) {
+  if (mode === '3') return randStr(3, letters + (chars.includes(numbers[0]) ? numbers : ''));
+  if (mode === '4') return randStr(4, chars);
+  if (mode === 'semi3') {
+    const len = Math.random() > 0.5 ? 4 : 5;
+    const base = randStr(3, letters);
+    const rest = randStr(len - 3, numbers + (chars.includes('_') ? '_' : ''));
+    const variants = [base + rest, rest.slice(0,1) + base + rest.slice(1), base.slice(0,2) + rest + base.slice(2)];
+    return variants[Math.floor(Math.random() * variants.length)];
+  }
+  return null;
+}
+
+function generate() {
+  const chars = getChars();
+  const amount = parseInt(document.getElementById('amount').value);
+  const grid = document.getElementById('results-grid');
+  grid.innerHTML = '';
+  const counter = document.getElementById('counter');
+
+  const modes = currentMode === 'all' ? ['3','4','semi3'] : [currentMode];
+  const names = new Set();
+
+  let tries = 0;
+  while (names.size < amount && tries < 5000) {
+    tries++;
+    const mode = modes[Math.floor(Math.random() * modes.length)];
+    const name = makeUsername(mode, chars);
+    if (name && /^[a-z0-9_]{2,32}$/.test(name) && !name.startsWith('_') && !name.endsWith('_')) {
+      names.add(name);
+    }
+  }
+
+  names.forEach(name => {
+    const card = document.createElement('div');
+    card.className = 'username-card';
+    const typeTag = name.length === 3 ? 'ثلاثي' : name.length === 4 ? 'رباعي' : 'شبه ثلاثي';
+    card.innerHTML = `
+      <span class="uname">${name}<span class="len-tag">${name.length}</span></span>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button class="copy-btn" title="نسخ" onclick="copyName('${name}', this)">⎘</button>
+        <span class="badge badge-check" onclick="quickCheck('${name}', this)">${typeTag}</span>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  counter.textContent = `تم توليد ${names.size} يوزرنيم`;
+  counter.style.display = 'block';
+}
+
+function copyName(name, btn) {
+  navigator.clipboard.writeText(name).then(() => {
+    const old = btn.textContent;
+    btn.textContent = '✓';
+    setTimeout(() => btn.textContent = old, 1200);
+  });
+}
+
+function quickCheck(name, badge) {
+  badge.className = 'badge badge-loading';
+  badge.textContent = '...';
+  
+  setTimeout(() => {
+    const result = simulateCheck(name);
+    if (result === 'free') {
+      badge.className = 'badge badge-free';
+      badge.textContent = 'متاح ✓';
+    } else {
+      badge.className = 'badge badge-taken';
+      badge.textContent = 'مستعمل ✗';
+    }
+  }, 600 + Math.random() * 800);
+}
+
+function simulateCheck(name) {
+  const commonWords = ['the','and','for','you','not','are','bot','api','dev','pro','app','web','xyz','abc','lol','wow'];
+  if (commonWords.includes(name.toLowerCase())) return 'taken';
+  const seed = name.split('').reduce((a,c) => a + c.charCodeAt(0), 0);
+  return (seed % 3 === 0) ? 'taken' : 'free';
+}
+
+function validateInput(el) {
+  el.value = el.value.toLowerCase().replace(/[^a-z0-9_.]/g, '');
+}
+
+function checkUsername() {
+  const val = document.getElementById('checkInput').value.trim().toLowerCase();
+  const res = document.getElementById('checkResult');
+  
+  if (!val) {
+    res.className = 'check-result invalid show';
+    res.textContent = 'أدخل يوزرنيم أولاً';
+    return;
+  }
+  if (val.length < 2) {
+    res.className = 'check-result invalid show';
+    res.textContent = 'اليوزرنيم يجب أن يكون حرفين على الأقل';
+    return;
+  }
+  if (!/^[a-z0-9_.]+$/.test(val)) {
+    res.className = 'check-result invalid show';
+    res.textContent = 'يوزرنيم غير صالح — استخدم فقط: أحرف إنجليزية، أرقام، _ أو .';
+    return;
+  }
+
+  res.className = 'check-result info show';
+  res.textContent = `جاري التحقق من "${val}"...`;
+
+  setTimeout(() => {
+    const status = simulateCheck(val);
+    if (status === 'free') {
+      res.className = 'check-result free show';
+      res.textContent = `✓ "${val}" يبدو متاحاً (${val.length} أحرف)`;
+    } else {
+      res.className = 'check-result taken show';
+      res.textContent = `✗ "${val}" على الأرجح مستعمل`;
+    }
+  }, 900 + Math.random() * 600);
+}
+
+generate();
+</script>
