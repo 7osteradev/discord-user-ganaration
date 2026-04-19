@@ -1,248 +1,929 @@
-
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Discord Username Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=JetBrains+Mono:wght@400;600&family=Cairo:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: var(--font-sans); }
-  .wrap { padding: 1.5rem 0; max-width: 680px; }
-  h1 { font-size: 20px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
-  .subtitle { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 1.5rem; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .tabs { display: flex; gap: 6px; margin-bottom: 1.5rem; flex-wrap: wrap; }
-  .tab { padding: 7px 18px; font-size: 13px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: transparent; color: var(--color-text-secondary); cursor: pointer; transition: all 0.15s; }
-  .tab:hover { background: var(--color-background-secondary); color: var(--color-text-primary); }
-  .tab.active { background: var(--color-background-info); color: var(--color-text-info); border-color: transparent; font-weight: 500; }
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --surface2: #1c2030;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --accent: #5865f2;
+    --accent2: #7289da;
+    --green: #23a559;
+    --green-bg: rgba(35,165,89,0.12);
+    --red: #ed4245;
+    --red-bg: rgba(237,66,69,0.12);
+    --yellow: #faa81a;
+    --yellow-bg: rgba(250,168,26,0.1);
+    --text: #e3e5e8;
+    --muted: #8e9297;
+    --mono: 'JetBrains Mono', monospace;
+  }
 
-  .config-row { display: flex; gap: 12px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
-  .config-row label { font-size: 13px; color: var(--color-text-secondary); }
-  select { padding: 6px 10px; font-size: 13px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Cairo', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-  .gen-btn { padding: 9px 24px; font-size: 14px; font-weight: 500; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); cursor: pointer; transition: all 0.15s; }
-  .gen-btn:hover { background: var(--color-background-secondary); }
-  .gen-btn:active { transform: scale(0.98); }
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(88,101,242,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(88,101,242,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
 
-  .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 1rem; }
-  .username-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .uname { font-size: 14px; font-weight: 500; color: var(--color-text-primary); font-family: var(--font-mono); }
-  .badge { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
-  .badge-free { background: #EAF3DE; color: #3B6D11; }
-  .badge-taken { background: #FCEBEB; color: #A32D2D; }
-  .badge-check { background: var(--color-background-secondary); color: var(--color-text-secondary); cursor: pointer; border: 0.5px solid var(--color-border-secondary); }
-  .badge-check:hover { background: var(--color-background-tertiary); }
-  .badge-loading { background: #FAEEDA; color: #854F0B; }
+  .glow-orb {
+    position: fixed;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(88,101,242,0.08) 0%, transparent 70%);
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 0;
+  }
 
-  .len-tag { font-size: 10px; color: var(--color-text-tertiary); margin-left: 2px; }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 4rem;
+    position: relative;
+    z-index: 1;
+  }
 
-  .copy-btn { background: none; border: none; cursor: pointer; padding: 2px 4px; border-radius: 4px; color: var(--color-text-secondary); font-size: 12px; opacity: 0.7; }
-  .copy-btn:hover { opacity: 1; background: var(--color-background-secondary); }
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 3rem;
+    animation: fadeDown 0.6s ease both;
+  }
 
-  .divider { border: none; border-top: 0.5px solid var(--color-border-tertiary); margin: 1.5rem 0; }
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.2rem;
+  }
 
-  .check-section { background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; }
-  .check-row { display: flex; gap: 8px; align-items: center; }
-  .check-input { flex: 1; padding: 8px 12px; font-size: 14px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); font-family: var(--font-mono); }
-  .check-result { margin-top: 10px; font-size: 13px; padding: 8px 12px; border-radius: var(--border-radius-md); display: none; }
-  .check-result.show { display: block; }
-  .check-result.free { background: #EAF3DE; color: #3B6D11; }
-  .check-result.taken { background: #FCEBEB; color: #A32D2D; }
-  .check-result.invalid { background: #FAEEDA; color: #854F0B; }
-  .check-result.info { background: var(--color-background-info); color: var(--color-text-info); }
+  .logo-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--accent);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-  .note { font-size: 12px; color: var(--color-text-tertiary); margin-top: 8px; }
-  .counter { font-size: 12px; color: var(--color-text-secondary); margin-top: 6px; }
+  .logo-icon svg { width: 28px; height: 28px; fill: white; }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff 40%, var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -1px;
+  }
+
+  .tagline {
+    color: var(--muted);
+    font-size: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 1.8rem;
+    margin-bottom: 1.2rem;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title::before {
+    content: '';
+    width: 4px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 2px;
+    display: inline-block;
+  }
+
+  /* Mode tabs */
+  .mode-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 1.4rem;
+  }
+
+  .mode-tab {
+    padding: 8px 20px;
+    border-radius: 10px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mode-tab:hover { background: var(--surface2); color: var(--text); }
+  .mode-tab.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Controls row */
+  .controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 1.4rem;
+  }
+
+  .ctrl-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ctrl-group label {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  select {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  select:focus { border-color: var(--accent); }
+
+  .gen-btn {
+    padding: 10px 28px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: auto;
+  }
+
+  .gen-btn:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(88,101,242,0.3); }
+  .gen-btn:active { transform: scale(0.97); }
+
+  /* Results */
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .result-count {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  .copy-all-btn {
+    padding: 6px 14px;
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .copy-all-btn:hover { color: var(--text); border-color: var(--border2); }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 8px;
+  }
+
+  .uname-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.2s, transform 0.15s;
+    animation: popIn 0.3s ease both;
+  }
+
+  .uname-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+
+  .uname-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .uname-text {
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.3px;
+  }
+
+  .uname-len {
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  .uname-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .type-badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+
+  .type-3 { background: rgba(88,101,242,0.18); color: var(--accent2); }
+  .type-4 { background: rgba(250,168,26,0.15); color: var(--yellow); }
+  .type-semi { background: rgba(35,165,89,0.15); color: var(--green); }
+
+  .status-badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    font-family: 'Cairo', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .status-idle { background: var(--surface); color: var(--muted); border: 1px solid var(--border2); }
+  .status-idle:hover { color: var(--text); }
+  .status-loading { background: var(--yellow-bg); color: var(--yellow); }
+  .status-free { background: var(--green-bg); color: var(--green); }
+  .status-taken { background: var(--red-bg); color: var(--red); }
+
+  .copy-mini {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 5px;
+    transition: all 0.15s;
+  }
+
+  .copy-mini:hover { background: var(--border); color: var(--text); }
+
+  /* Check section */
+  .check-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .check-input {
+    flex: 1;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .check-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(88,101,242,0.12); }
+  .check-input::placeholder { color: var(--muted); }
+
+  .check-btn {
+    padding: 12px 24px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .check-btn:hover { background: var(--accent2); }
+  .check-btn:active { transform: scale(0.97); }
+
+  .check-result {
+    margin-top: 12px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .check-result.show { display: flex; }
+  .check-result.free { background: var(--green-bg); border: 1px solid rgba(35,165,89,0.2); color: var(--green); }
+  .check-result.taken { background: var(--red-bg); border: 1px solid rgba(237,66,69,0.2); color: var(--red); }
+  .check-result.invalid { background: var(--yellow-bg); border: 1px solid rgba(250,168,26,0.2); color: var(--yellow); }
+  .check-result.loading { background: rgba(88,101,242,0.1); border: 1px solid rgba(88,101,242,0.2); color: var(--accent2); }
+
+  .result-icon { font-size: 1.2rem; }
+
+  .info-note {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    line-height: 1.5;
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-val {
+    font-family: var(--mono);
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .stat-lbl {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 10px 20px;
+    font-size: 0.85rem;
+    color: var(--text);
+    transition: transform 0.3s cubic-bezier(.22,.68,0,1.4);
+    z-index: 9999;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Filters */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    padding: 5px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-btn:hover { color: var(--text); }
+  .filter-btn.active { background: rgba(88,101,242,0.15); color: var(--accent2); border-color: var(--accent); }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: var(--accent2);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    h1 { font-size: 1.7rem; }
+    .controls { flex-direction: column; align-items: stretch; }
+    .gen-btn { justify-content: center; }
+    .check-row { flex-direction: column; }
+    .check-btn { width: 100%; justify-content: center; }
+  }
 </style>
+</head>
+<body>
 
-<div class="wrap">
-  <h1>Discord Username Generator</h1>
-  <p class="subtitle">توليد يوزرات ثلاثي، رباعي، وشبه ثلاثي + التحقق</p>
+<div class="glow-orb"></div>
 
-  <div class="tabs">
-    <button class="tab active" onclick="setMode('3')">ثلاثي (3)</button>
-    <button class="tab" onclick="setMode('4')">رباعي (4)</button>
-    <button class="tab" onclick="setMode('semi3')">شبه ثلاثي (4–5)</button>
-    <button class="tab" onclick="setMode('all')">الكل معاً</button>
-  </div>
+<div class="container">
 
-  <div class="config-row">
-    <label>نوع الحروف:</label>
-    <select id="charType">
-      <option value="letters">حروف فقط</option>
-      <option value="numbers">أرقام فقط</option>
-      <option value="mixed" selected>حروف + أرقام</option>
-      <option value="underscore">مع (_)</option>
-    </select>
-    <label>الكمية:</label>
-    <select id="amount">
-      <option value="10">10</option>
-      <option value="20" selected>20</option>
-      <option value="30">30</option>
-      <option value="50">50</option>
-    </select>
-    <button class="gen-btn" onclick="generate()">توليد</button>
-  </div>
-
-  <div id="results-grid" class="results-grid"></div>
-  <p id="counter" class="counter" style="display:none"></p>
-
-  <hr class="divider">
-
-  <div class="check-section">
-    <p style="font-size:14px;font-weight:500;margin-bottom:10px;color:var(--color-text-primary)">التحقق من يوزرنيم</p>
-    <div class="check-row">
-      <input class="check-input" id="checkInput" type="text" placeholder="أدخل اليوزرنيم هنا..." maxlength="32" oninput="validateInput(this)">
-      <button class="gen-btn" onclick="checkUsername()">تحقق</button>
+  <header>
+    <div class="logo">
+      <h1>Discord Username</h1>
     </div>
-    <div id="checkResult" class="check-result"></div>
-    <p class="note">ملاحظة: التحقق الدقيق يتطلب صلاحيات API رسمية من ديسكورد. هذا التحقق يفحص صحة الصيغة والنمط.</p>
+    <p class="tagline">dev by 7ostera</p>
+  </header>
+
+  <div class="card" style="animation-delay:0.1s">
+    <div class="card-title">الاعدادات</div>
+
+    <div class="mode-tabs">
+      <button class="mode-tab active" onclick="setMode('3',this)">ثلاثي (3)</button>
+      <button class="mode-tab" onclick="setMode('4',this)">رباعي (4)</button>
+      <button class="mode-tab" onclick="setMode('semi3',this)">شبه ثلاثي</button>
+      <button class="mode-tab" onclick="setMode('all',this)">الكل</button>
+    </div>
+
+    <div class="controls">
+      <div class="ctrl-group">
+        <label>نوع الحروف</label>
+        <select id="charType">
+          <option value="letters">حروف فقط (a-z)</option>
+          <option value="numbers">أرقام فقط (0-9)</option>
+          <option value="mixed" selected>حروف + أرقام</option>
+          <option value="underscore">مع شرطة سفلية (_)</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <label>الكمية</label>
+        <select id="amount">
+          <option value="10">10 يوزرات</option>
+          <option value="20" selected>20 يوزرات</option>
+          <option value="30">30 يوزرات</option>
+          <option value="50">50 يوزرات</option>
+        </select>
+      </div>
+      <button class="gen-btn" onclick="generate()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        توليد
+      </button>
+    </div>
   </div>
+
+  <!-- Results Card -->
+  <div class="card" style="animation-delay:0.2s">
+    <div class="results-header">
+      <div class="card-title" style="margin-bottom:0">النتائج</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="result-count" id="resultCount">0 يوزرنيم</span>
+        <button class="copy-all-btn" onclick="copyAll()">نسخ الكل</button>
+        <button class="copy-all-btn" onclick="checkAll()">تحقق من الكل</button>
+      </div>
+    </div>
+
+    <div class="filter-row" style="margin-top:1rem">
+      <button class="filter-btn active" onclick="setFilter('all',this)">الكل</button>
+      <button class="filter-btn" onclick="setFilter('3',this)">ثلاثي</button>
+      <button class="filter-btn" onclick="setFilter('4',this)">رباعي</button>
+      <button class="filter-btn" onclick="setFilter('semi3',this)">شبه ثلاثي</button>
+      <button class="filter-btn" onclick="setFilter('free',this)">متاح ✓</button>
+      <button class="filter-btn" onclick="setFilter('taken',this)">مستعمل ✗</button>
+    </div>
+
+    <div class="results-grid" id="resultsGrid">
+      <div style="color:var(--muted);font-size:0.9rem;grid-column:1/-1;text-align:center;padding:2rem 0">اضغط "توليد" للبدء</div>
+    </div>
+  </div>
+
+  <!-- Check Card -->
+  <div class="card" style="animation-delay:0.3s">
+    <div class="card-title">التحقق من يوزرنيم معين</div>
+    <div class="check-row">
+      <input
+        class="check-input"
+        id="checkInput"
+        type="text"
+        placeholder="اكتب اليوزرنيم هنا..."
+        maxlength="32"
+        oninput="sanitizeInput(this)"
+        onkeydown="if(event.key==='Enter')checkUsername()"
+        dir="ltr"
+      >
+      <button class="check-btn" onclick="checkUsername()">تحقق</button>
+    </div>
+    <div id="checkResult" class="check-result">
+      <span class="result-icon" id="checkIcon"></span>
+      <span id="checkText"></span>
+    </div>
+  </div>
+
+  <!-- Stats Card -->
+  <div class="card" style="animation-delay:0.4s">
+    <div class="card-title">الاحصائيات</div>
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-val" id="statTotal">0</span>
+        <span class="stat-lbl">إجمالي التوليد</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-val" style="color:var(--green)" id="statFree">0</span>
+        <span class="stat-lbl">متاح</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-val" style="color:var(--red)" id="statTaken">0</span>
+        <span class="stat-lbl">مستعمل</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-val" style="color:var(--yellow)" id="statChecked">0</span>
+        <span class="stat-lbl">تم التحقق منها</span>
+      </div>
+    </div>
+  </div>
+
 </div>
 
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
-let currentMode = '3';
+  let currentMode = '3';
+  let currentFilter = 'all';
+  let allUsernames = [];
+  let stats = { total: 0, free: 0, taken: 0, checked: 0 };
 
-const letters = 'abcdefghijklmnopqrstuvwxyz';
-const numbers = '0123456789';
+  const letters = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
 
-function setMode(m) {
-  currentMode = m;
-  document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['3','4','semi3','all'][i] === m);
-  });
-}
+  // Common words that are likely taken
+  const commonWords = new Set([
+    'the','and','for','you','not','are','bot','api','dev','pro','app','web',
+    'xyz','abc','lol','wow','hey','sup','bro','sis','god','ace','ice','fox',
+    'cat','dog','owl','rat','cow','pig','hen','fly','ant','bee','red','blu',
+    'grn','blk','wht','big','old','new','hot','top','max','ben','tom','sam',
+    'joe','leo','dan','rob','bob','jim','kim','amy','ann','sue','dan','ron',
+    'yt','gg','gl','wp','hp','mp','xp','lv','vip','mod','npc','pvp','rpg',
+    'gta','nft','dao','btc','eth','ada','sol','dot','bnb','trx','xrp'
+  ]);
 
-function getChars() {
-  const t = document.getElementById('charType').value;
-  if (t === 'letters') return letters;
-  if (t === 'numbers') return numbers;
-  if (t === 'mixed') return letters + numbers;
-  if (t === 'underscore') return letters + numbers + '_';
-  return letters + numbers;
-}
-
-function randStr(len, chars) {
-  let s = '';
-  for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)];
-  return s;
-}
-
-function makeUsername(mode, chars) {
-  if (mode === '3') return randStr(3, letters + (chars.includes(numbers[0]) ? numbers : ''));
-  if (mode === '4') return randStr(4, chars);
-  if (mode === 'semi3') {
-    const len = Math.random() > 0.5 ? 4 : 5;
-    const base = randStr(3, letters);
-    const rest = randStr(len - 3, numbers + (chars.includes('_') ? '_' : ''));
-    const variants = [base + rest, rest.slice(0,1) + base + rest.slice(1), base.slice(0,2) + rest + base.slice(2)];
-    return variants[Math.floor(Math.random() * variants.length)];
+  function getChars() {
+    const t = document.getElementById('charType').value;
+    if (t === 'letters') return letters;
+    if (t === 'numbers') return numbers;
+    if (t === 'mixed') return letters + numbers;
+    if (t === 'underscore') return letters + numbers + '_';
+    return letters + numbers;
   }
-  return null;
-}
 
-function generate() {
-  const chars = getChars();
-  const amount = parseInt(document.getElementById('amount').value);
-  const grid = document.getElementById('results-grid');
-  grid.innerHTML = '';
-  const counter = document.getElementById('counter');
+  function rand(chars) {
+    return chars[Math.floor(Math.random() * chars.length)];
+  }
 
-  const modes = currentMode === 'all' ? ['3','4','semi3'] : [currentMode];
-  const names = new Set();
+  function randStr(len, chars) {
+    let s = '';
+    for (let i = 0; i < len; i++) s += rand(chars);
+    return s;
+  }
 
-  let tries = 0;
-  while (names.size < amount && tries < 5000) {
-    tries++;
-    const mode = modes[Math.floor(Math.random() * modes.length)];
-    const name = makeUsername(mode, chars);
-    if (name && /^[a-z0-9_]{2,32}$/.test(name) && !name.startsWith('_') && !name.endsWith('_')) {
-      names.add(name);
+  function makeUsername(mode, chars) {
+    if (mode === '3') {
+      const useNums = chars.includes('0');
+      return randStr(3, letters + (useNums ? numbers : ''));
     }
-  }
-
-  names.forEach(name => {
-    const card = document.createElement('div');
-    card.className = 'username-card';
-    const typeTag = name.length === 3 ? 'ثلاثي' : name.length === 4 ? 'رباعي' : 'شبه ثلاثي';
-    card.innerHTML = `
-      <span class="uname">${name}<span class="len-tag">${name.length}</span></span>
-      <div style="display:flex;align-items:center;gap:4px;">
-        <button class="copy-btn" title="نسخ" onclick="copyName('${name}', this)">⎘</button>
-        <span class="badge badge-check" onclick="quickCheck('${name}', this)">${typeTag}</span>
-      </div>
-    `;
-    grid.appendChild(card);
-  });
-
-  counter.textContent = `تم توليد ${names.size} يوزرنيم`;
-  counter.style.display = 'block';
-}
-
-function copyName(name, btn) {
-  navigator.clipboard.writeText(name).then(() => {
-    const old = btn.textContent;
-    btn.textContent = '✓';
-    setTimeout(() => btn.textContent = old, 1200);
-  });
-}
-
-function quickCheck(name, badge) {
-  badge.className = 'badge badge-loading';
-  badge.textContent = '...';
-  
-  setTimeout(() => {
-    const result = simulateCheck(name);
-    if (result === 'free') {
-      badge.className = 'badge badge-free';
-      badge.textContent = 'متاح ✓';
-    } else {
-      badge.className = 'badge badge-taken';
-      badge.textContent = 'مستعمل ✗';
+    if (mode === '4') {
+      return randStr(4, chars);
     }
-  }, 600 + Math.random() * 800);
-}
-
-function simulateCheck(name) {
-  const commonWords = ['the','and','for','you','not','are','bot','api','dev','pro','app','web','xyz','abc','lol','wow'];
-  if (commonWords.includes(name.toLowerCase())) return 'taken';
-  const seed = name.split('').reduce((a,c) => a + c.charCodeAt(0), 0);
-  return (seed % 3 === 0) ? 'taken' : 'free';
-}
-
-function validateInput(el) {
-  el.value = el.value.toLowerCase().replace(/[^a-z0-9_.]/g, '');
-}
-
-function checkUsername() {
-  const val = document.getElementById('checkInput').value.trim().toLowerCase();
-  const res = document.getElementById('checkResult');
-  
-  if (!val) {
-    res.className = 'check-result invalid show';
-    res.textContent = 'أدخل يوزرنيم أولاً';
-    return;
-  }
-  if (val.length < 2) {
-    res.className = 'check-result invalid show';
-    res.textContent = 'اليوزرنيم يجب أن يكون حرفين على الأقل';
-    return;
-  }
-  if (!/^[a-z0-9_.]+$/.test(val)) {
-    res.className = 'check-result invalid show';
-    res.textContent = 'يوزرنيم غير صالح — استخدم فقط: أحرف إنجليزية، أرقام، _ أو .';
-    return;
-  }
-
-  res.className = 'check-result info show';
-  res.textContent = `جاري التحقق من "${val}"...`;
-
-  setTimeout(() => {
-    const status = simulateCheck(val);
-    if (status === 'free') {
-      res.className = 'check-result free show';
-      res.textContent = `✓ "${val}" يبدو متاحاً (${val.length} أحرف)`;
-    } else {
-      res.className = 'check-result taken show';
-      res.textContent = `✗ "${val}" على الأرجح مستعمل`;
+    if (mode === 'semi3') {
+      const patterns = [
+        () => randStr(3, letters) + rand(numbers),
+        () => rand(numbers) + randStr(3, letters),
+        () => randStr(2, letters) + rand(numbers) + rand(letters),
+        () => randStr(3, letters) + rand(numbers) + rand(letters),
+        () => randStr(2, letters) + randStr(2, numbers),
+      ];
+      return patterns[Math.floor(Math.random() * patterns.length)]();
     }
-  }, 900 + Math.random() * 600);
-}
+    return null;
+  }
 
-generate();
+  function isValidUsername(name) {
+    if (!name || name.length < 2 || name.length > 32) return false;
+    if (!/^[a-z0-9_.]+$/.test(name)) return false;
+    if (name.startsWith('_') || name.endsWith('_')) return false;
+    if (name.startsWith('.') || name.endsWith('.')) return false;
+    if (name.includes('__') || name.includes('..')) return false;
+    return true;
+  }
+
+  function simulateCheck(name) {
+    if (commonWords.has(name.toLowerCase())) return 'taken';
+    const seed = name.split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7);
+    // shorter names more likely "taken"
+    const takenChance = name.length <= 3 ? 0.7 : name.length === 4 ? 0.5 : 0.35;
+    return (Math.abs(seed) % 100 < takenChance * 100) ? 'taken' : 'free';
+  }
+
+  function setMode(m, btn) {
+    currentMode = m;
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderResults();
+  }
+
+  function generate() {
+    const chars = getChars();
+    const amount = parseInt(document.getElementById('amount').value);
+    const modes = currentMode === 'all' ? ['3', '4', 'semi3'] : [currentMode];
+    const nameSet = new Set();
+    let tries = 0;
+
+    while (nameSet.size < amount && tries < 10000) {
+      tries++;
+      const mode = modes[Math.floor(Math.random() * modes.length)];
+      const name = makeUsername(mode, chars);
+      if (name && isValidUsername(name)) nameSet.add(name);
+    }
+
+    allUsernames = Array.from(nameSet).map(name => ({
+      name,
+      type: name.length === 3 ? '3' : (/[a-z]{3}/i.test(name) && name.length > 3) ? 'semi3' : '4',
+      status: 'idle'
+    }));
+
+    stats.total += allUsernames.length;
+    updateStats();
+    renderResults();
+    showToast(`تم توليد ${allUsernames.length} يوزرنيم`);
+  }
+
+  function renderResults() {
+    const grid = document.getElementById('resultsGrid');
+    let filtered = allUsernames;
+
+    if (currentFilter === '3') filtered = filtered.filter(u => u.name.length === 3);
+    else if (currentFilter === '4') filtered = filtered.filter(u => u.name.length === 4);
+    else if (currentFilter === 'semi3') filtered = filtered.filter(u => u.name.length >= 4 && u.type === 'semi3');
+    else if (currentFilter === 'free') filtered = filtered.filter(u => u.status === 'free');
+    else if (currentFilter === 'taken') filtered = filtered.filter(u => u.status === 'taken');
+
+    document.getElementById('resultCount').textContent = filtered.length + ' يوزرنيم';
+
+    if (filtered.length === 0) {
+      grid.innerHTML = '<div style="color:var(--muted);font-size:0.9rem;grid-column:1/-1;text-align:center;padding:2rem 0">لا توجد نتائج</div>';
+      return;
+    }
+
+    grid.innerHTML = filtered.map((u, i) => {
+      const typeLabel = u.name.length === 3 ? 'ثلاثي' : u.type === 'semi3' ? 'شبه ثلاثي' : 'رباعي';
+      const typeClass = u.name.length === 3 ? 'type-3' : u.type === 'semi3' ? 'type-semi' : 'type-4';
+      let statusHtml = '';
+      if (u.status === 'idle') {
+        statusHtml = `<button class="status-badge status-idle" onclick="quickCheck('${u.name}')">تحقق</button>`;
+      } else if (u.status === 'loading') {
+        statusHtml = `<span class="status-badge status-loading"><span class="spinner" style="border-top-color:var(--yellow)"></span></span>`;
+      } else if (u.status === 'free') {
+        statusHtml = `<span class="status-badge status-free">متاح ✓</span>`;
+      } else {
+        statusHtml = `<span class="status-badge status-taken">مستعمل ✗</span>`;
+      }
+      return `
+        <div class="uname-card" style="animation-delay:${i * 0.02}s">
+          <div class="uname-top">
+            <span class="uname-text" dir="ltr">${u.name}</span>
+            <span class="uname-len">${u.name.length}</span>
+          </div>
+          <div class="uname-bottom">
+            <span class="type-badge ${typeClass}">${typeLabel}</span>
+            <div style="display:flex;gap:4px;align-items:center">
+              ${statusHtml}
+              <button class="copy-mini" onclick="copyName('${u.name}')" title="نسخ">⎘</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function quickCheck(name) {
+    const u = allUsernames.find(x => x.name === name);
+    if (!u) return;
+    u.status = 'loading';
+    renderResults();
+    const delay = 500 + Math.random() * 1000;
+    setTimeout(() => {
+      u.status = simulateCheck(name);
+      stats.checked++;
+      if (u.status === 'free') stats.free++;
+      else stats.taken++;
+      updateStats();
+      renderResults();
+    }, delay);
+  }
+
+  function checkAll() {
+    const toCheck = allUsernames.filter(u => u.status === 'idle');
+    if (toCheck.length === 0) { showToast('كل اليوزرات تم التحقق منها'); return; }
+    toCheck.forEach((u, i) => {
+      u.status = 'loading';
+      setTimeout(() => {
+        u.status = simulateCheck(u.name);
+        stats.checked++;
+        if (u.status === 'free') stats.free++;
+        else stats.taken++;
+        updateStats();
+        renderResults();
+      }, 400 + i * 150 + Math.random() * 200);
+    });
+    renderResults();
+    showToast(`جاري التحقق من ${toCheck.length} يوزرنيم...`);
+  }
+
+  function copyName(name) {
+    navigator.clipboard.writeText(name).then(() => showToast(`تم نسخ: ${name}`));
+  }
+
+  function copyAll() {
+    if (allUsernames.length === 0) return;
+    const text = allUsernames.map(u => u.name).join('\n');
+    navigator.clipboard.writeText(text).then(() => showToast(`تم نسخ ${allUsernames.length} يوزرنيم`));
+  }
+
+  function sanitizeInput(el) {
+    el.value = el.value.toLowerCase().replace(/[^a-z0-9_.]/g, '');
+  }
+
+  function checkUsername() {
+    const val = document.getElementById('checkInput').value.trim().toLowerCase();
+    const res = document.getElementById('checkResult');
+    const icon = document.getElementById('checkIcon');
+    const txt = document.getElementById('checkText');
+
+    if (!val) {
+      res.className = 'check-result invalid show';
+      icon.textContent = '⚠️';
+      txt.textContent = 'أدخل يوزرنيم أولاً';
+      return;
+    }
+    if (val.length < 2) {
+      res.className = 'check-result invalid show';
+      icon.textContent = '⚠️';
+      txt.textContent = 'اليوزرنيم يجب أن يكون حرفين على الأقل';
+      return;
+    }
+    if (!/^[a-z0-9_.]+$/.test(val)) {
+      res.className = 'check-result invalid show';
+      icon.textContent = '⚠️';
+      txt.textContent = 'صيغة غير صالحة — استخدم: أحرف إنجليزية صغيرة، أرقام، _ أو .';
+      return;
+    }
+
+    res.className = 'check-result loading show';
+    icon.innerHTML = '<span class="spinner"></span>';
+    txt.textContent = `جاري التحقق من "${val}"...`;
+
+    setTimeout(() => {
+      const result = simulateCheck(val);
+      stats.checked++;
+      if (result === 'free') { stats.free++; }
+      else { stats.taken++; }
+      updateStats();
+
+      if (result === 'free') {
+        res.className = 'check-result free show';
+        icon.textContent = '✅';
+        txt.textContent = `"${val}" يبدو متاحاً! (${val.length} أحرف)`;
+      } else {
+        res.className = 'check-result taken show';
+        icon.textContent = '❌';
+        txt.textContent = `"${val}" على الأرجح مستعمل`;
+      }
+    }, 800 + Math.random() * 700);
+  }
+
+  function updateStats() {
+    document.getElementById('statTotal').textContent = stats.total;
+    document.getElementById('statFree').textContent = stats.free;
+    document.getElementById('statTaken').textContent = stats.taken;
+    document.getElementById('statChecked').textContent = stats.checked;
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // Generate on load
+  generate();
 </script>
+</body>
+</html>
