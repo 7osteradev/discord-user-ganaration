@@ -529,6 +529,7 @@
 
 <div class="container">
 
+  <!-- Header -->
   <header>
     <div class="logo">
       <h1>Discord Username</h1>
@@ -536,14 +537,15 @@
     <p class="tagline">dev by 7ostera</p>
   </header>
 
+  <!-- Generator Card -->
   <div class="card" style="animation-delay:0.1s">
-    <div class="card-title">الاعدادات</div>
+    <div class="card-title">إعدادات التوليد</div>
 
     <div class="mode-tabs">
       <button class="mode-tab active" onclick="setMode('3',this)">ثلاثي (3)</button>
       <button class="mode-tab" onclick="setMode('4',this)">رباعي (4)</button>
       <button class="mode-tab" onclick="setMode('semi3',this)">شبه ثلاثي</button>
-      <button class="mode-tab" onclick="setMode('all',this)">الكل</button>
+      <button class="mode-tab" onclick="setMode('all',this)">الكل معاً</button>
     </div>
 
     <div class="controls">
@@ -621,7 +623,7 @@
 
   <!-- Stats Card -->
   <div class="card" style="animation-delay:0.4s">
-    <div class="card-title">الاحصائيات</div>
+    <div class="card-title">إحصائيات</div>
     <div class="stats-bar">
       <div class="stat-item">
         <span class="stat-val" id="statTotal">0</span>
@@ -695,12 +697,18 @@
       return randStr(4, chars);
     }
     if (mode === 'semi3') {
+      const hasDot = chars.includes('_');
       const patterns = [
         () => randStr(3, letters) + rand(numbers),
         () => rand(numbers) + randStr(3, letters),
         () => randStr(2, letters) + rand(numbers) + rand(letters),
         () => randStr(3, letters) + rand(numbers) + rand(letters),
         () => randStr(2, letters) + randStr(2, numbers),
+        () => randStr(2, letters) + '.' + rand(letters),
+        () => rand(letters) + '.' + randStr(2, letters),
+        () => randStr(3, letters) + '.',
+        () => randStr(2, letters) + '-' + rand(letters),
+        () => rand(letters) + '-' + randStr(2, letters),
       ];
       return patterns[Math.floor(Math.random() * patterns.length)]();
     }
@@ -709,19 +717,34 @@
 
   function isValidUsername(name) {
     if (!name || name.length < 2 || name.length > 32) return false;
-    if (!/^[a-z0-9_.]+$/.test(name)) return false;
-    if (name.startsWith('_') || name.endsWith('_')) return false;
-    if (name.startsWith('.') || name.endsWith('.')) return false;
-    if (name.includes('__') || name.includes('..')) return false;
+    if (!/^[a-z0-9_.\-]+$/.test(name)) return false;
+    if (/^[_.\-]|[_.\-]$/.test(name)) return false;
+    if (/[_.\-]{2}/.test(name)) return false;
     return true;
   }
 
   function simulateCheck(name) {
     if (commonWords.has(name.toLowerCase())) return 'taken';
     const seed = name.split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7);
-    // shorter names more likely "taken"
     const takenChance = name.length <= 3 ? 0.7 : name.length === 4 ? 0.5 : 0.35;
     return (Math.abs(seed) % 100 < takenChance * 100) ? 'taken' : 'free';
+  }
+
+  async function realCheck(name) {
+    try {
+      const res = await fetch('https://discord.com/api/v9/unique-username/username-attempt-unauthed', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username: name })
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      // taken = false means username is taken, true = available
+      if (typeof data.taken === 'boolean') return data.taken ? 'taken' : 'free';
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   function setMode(m, btn) {
@@ -811,38 +834,40 @@
     }).join('');
   }
 
-  function quickCheck(name) {
+  async function quickCheck(name) {
     const u = allUsernames.find(x => x.name === name);
     if (!u) return;
     u.status = 'loading';
     renderResults();
-    const delay = 500 + Math.random() * 1000;
-    setTimeout(() => {
-      u.status = simulateCheck(name);
+    const result = await realCheck(name);
+    u.status = result ?? simulateCheck(name);
+    u.realApi = result !== null;
+    stats.checked++;
+    if (u.status === 'free') stats.free++;
+    else stats.taken++;
+    updateStats();
+    renderResults();
+  }
+
+  async function checkAll() {
+    const toCheck = allUsernames.filter(u => u.status === 'idle');
+    if (toCheck.length === 0) { showToast('كل اليوزرات تم التحقق منها'); return; }
+    showToast(`جاري التحقق من ${toCheck.length} يوزرنيم...`);
+    toCheck.forEach(u => { u.status = 'loading'; });
+    renderResults();
+    for (let i = 0; i < toCheck.length; i++) {
+      const u = toCheck[i];
+      const result = await realCheck(u.name);
+      u.status = result ?? simulateCheck(u.name);
+      u.realApi = result !== null;
       stats.checked++;
       if (u.status === 'free') stats.free++;
       else stats.taken++;
       updateStats();
       renderResults();
-    }, delay);
-  }
-
-  function checkAll() {
-    const toCheck = allUsernames.filter(u => u.status === 'idle');
-    if (toCheck.length === 0) { showToast('كل اليوزرات تم التحقق منها'); return; }
-    toCheck.forEach((u, i) => {
-      u.status = 'loading';
-      setTimeout(() => {
-        u.status = simulateCheck(u.name);
-        stats.checked++;
-        if (u.status === 'free') stats.free++;
-        else stats.taken++;
-        updateStats();
-        renderResults();
-      }, 400 + i * 150 + Math.random() * 200);
-    });
-    renderResults();
-    showToast(`جاري التحقق من ${toCheck.length} يوزرنيم...`);
+      await new Promise(r => setTimeout(r, 350));
+    }
+    showToast('تم التحقق من الكل ✓');
   }
 
   function copyName(name) {
@@ -856,10 +881,10 @@
   }
 
   function sanitizeInput(el) {
-    el.value = el.value.toLowerCase().replace(/[^a-z0-9_.]/g, '');
+    el.value = el.value.toLowerCase().replace(/[^a-z0-9_.\-]/g, '');
   }
 
-  function checkUsername() {
+  async function checkUsername() {
     const val = document.getElementById('checkInput').value.trim().toLowerCase();
     const res = document.getElementById('checkResult');
     const icon = document.getElementById('checkIcon');
@@ -888,23 +913,24 @@
     icon.innerHTML = '<span class="spinner"></span>';
     txt.textContent = `جاري التحقق من "${val}"...`;
 
-    setTimeout(() => {
-      const result = simulateCheck(val);
-      stats.checked++;
-      if (result === 'free') { stats.free++; }
-      else { stats.taken++; }
-      updateStats();
+    const result = await realCheck(val);
+    const status = result ?? simulateCheck(val);
+    const isReal = result !== null;
 
-      if (result === 'free') {
-        res.className = 'check-result free show';
-        icon.textContent = '✅';
-        txt.textContent = `"${val}" يبدو متاحاً! (${val.length} أحرف)`;
-      } else {
-        res.className = 'check-result taken show';
-        icon.textContent = '❌';
-        txt.textContent = `"${val}" على الأرجح مستعمل`;
-      }
-    }, 800 + Math.random() * 700);
+    stats.checked++;
+    if (status === 'free') stats.free++;
+    else stats.taken++;
+    updateStats();
+
+    if (status === 'free') {
+      res.className = 'check-result free show';
+      icon.textContent = '✅';
+      txt.textContent = `"${val}" متاح! ${isReal ? '(تحقق حقيقي ✓)' : '(تقريبي)'}`;
+    } else {
+      res.className = 'check-result taken show';
+      icon.textContent = '❌';
+      txt.textContent = `"${val}" مستعمل ${isReal ? '(تحقق حقيقي ✓)' : '(تقريبي)'}`;
+    }
   }
 
   function updateStats() {
