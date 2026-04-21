@@ -539,7 +539,7 @@
 
   <!-- Generator Card -->
   <div class="card" style="animation-delay:0.1s">
-    <div class="card-title">إعدادات التوليد</div>
+    <div class="card-title">الاعدادات</div>
 
     <div class="mode-tabs">
       <button class="mode-tab active" onclick="setMode('3',this)">ثلاثي (3)</button>
@@ -597,6 +597,12 @@
     <div class="results-grid" id="resultsGrid">
       <div style="color:var(--muted);font-size:0.9rem;grid-column:1/-1;text-align:center;padding:2rem 0">اضغط "توليد" للبدء</div>
     </div>
+  </div>
+
+  <!-- Rate Limit Bar -->
+  <div id="rateBar" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;border:1px solid rgba(35,165,89,0.2);background:var(--green-bg);margin-bottom:1.2rem;transition:all 0.4s;">
+    <span id="rateDot" style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;"></span>
+    <span id="rateText" style="font-size:0.85rem;color:var(--text);">API متاح — 0 طلب تم</span>
   </div>
 
   <!-- Check Card -->
@@ -697,7 +703,6 @@
       return randStr(4, chars);
     }
     if (mode === 'semi3') {
-      const hasDot = chars.includes('_');
       const patterns = [
         () => randStr(3, letters) + rand(numbers),
         () => rand(numbers) + randStr(3, letters),
@@ -706,9 +711,12 @@
         () => randStr(2, letters) + randStr(2, numbers),
         () => randStr(2, letters) + '.' + rand(letters),
         () => rand(letters) + '.' + randStr(2, letters),
-        () => randStr(3, letters) + '.',
         () => randStr(2, letters) + '-' + rand(letters),
         () => rand(letters) + '-' + randStr(2, letters),
+        () => '.' + randStr(3, letters),
+        () => '_' + randStr(3, letters),
+        () => '.' + randStr(2, letters) + rand(numbers),
+        () => '_' + randStr(2, letters) + rand(numbers),
       ];
       return patterns[Math.floor(Math.random() * patterns.length)]();
     }
@@ -718,7 +726,6 @@
   function isValidUsername(name) {
     if (!name || name.length < 2 || name.length > 32) return false;
     if (!/^[a-z0-9_.\-]+$/.test(name)) return false;
-    if (/^[_.\-]|[_.\-]$/.test(name)) return false;
     if (/[_.\-]{2}/.test(name)) return false;
     return true;
   }
@@ -730,16 +737,60 @@
     return (Math.abs(seed) % 100 < takenChance * 100) ? 'taken' : 'free';
   }
 
+  let isRateLimited = false;
+  let rateLimitUntil = 0;
+  let totalRequests = 0;
+
+  function updateRateStatus(limited, retryAfter) {
+    isRateLimited = limited;
+    if (limited && retryAfter) {
+      rateLimitUntil = Date.now() + retryAfter * 1000;
+    }
+    const bar = document.getElementById('rateBar');
+    const txt = document.getElementById('rateText');
+    const dot = document.getElementById('rateDot');
+    if (limited) {
+      bar.style.background = 'var(--red-bg)';
+      bar.style.borderColor = 'rgba(237,66,69,0.3)';
+      dot.style.background = 'var(--red)';
+      const secs = Math.ceil((rateLimitUntil - Date.now()) / 1000);
+      txt.textContent = `محظور مؤقتاً (Rate Limited) — انتظر ${secs} ثانية`;
+      setTimeout(() => {
+        if (Date.now() >= rateLimitUntil) {
+          isRateLimited = false;
+          updateRateStatus(false);
+        }
+      }, retryAfter ? retryAfter * 1000 + 500 : 5000);
+    } else {
+      bar.style.background = 'var(--green-bg)';
+      bar.style.borderColor = 'rgba(35,165,89,0.2)';
+      dot.style.background = 'var(--green)';
+      txt.textContent = `API متاح — ${totalRequests} طلب تم`;
+    }
+  }
+
   async function realCheck(name) {
+    if (isRateLimited) {
+      const secs = Math.ceil((rateLimitUntil - Date.now()) / 1000);
+      updateRateStatus(true);
+      return 'ratelimit';
+    }
     try {
       const res = await fetch('https://discord.com/api/v9/unique-username/username-attempt-unauthed', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ username: name })
       });
+      if (res.status === 429) {
+        const data = await res.json().catch(() => ({}));
+        const retryAfter = data.retry_after || 5;
+        updateRateStatus(true, retryAfter);
+        return 'ratelimit';
+      }
       if (!res.ok) return null;
+      totalRequests++;
+      updateRateStatus(false);
       const data = await res.json();
-      // taken = false means username is taken, true = available
       if (typeof data.taken === 'boolean') return data.taken ? 'taken' : 'free';
       return null;
     } catch {
@@ -813,6 +864,8 @@
         statusHtml = `<span class="status-badge status-loading"><span class="spinner" style="border-top-color:var(--yellow)"></span></span>`;
       } else if (u.status === 'free') {
         statusHtml = `<span class="status-badge status-free">متاح ✓</span>`;
+      } else if (u.status === 'unknown') {
+        statusHtml = `<button class="status-badge status-idle" onclick="quickCheck('${u.name}')">إعادة</button>`;
       } else {
         statusHtml = `<span class="status-badge status-taken">مستعمل ✗</span>`;
       }
@@ -840,11 +893,15 @@
     u.status = 'loading';
     renderResults();
     const result = await realCheck(name);
-    u.status = result ?? simulateCheck(name);
-    u.realApi = result !== null;
+    if (result === 'ratelimit') {
+      u.status = 'idle';
+      renderResults();
+      return;
+    }
+    u.status = result !== null ? result : 'unknown';
     stats.checked++;
     if (u.status === 'free') stats.free++;
-    else stats.taken++;
+    else if (u.status === 'taken') stats.taken++;
     updateStats();
     renderResults();
   }
@@ -853,19 +910,25 @@
     const toCheck = allUsernames.filter(u => u.status === 'idle');
     if (toCheck.length === 0) { showToast('كل اليوزرات تم التحقق منها'); return; }
     showToast(`جاري التحقق من ${toCheck.length} يوزرنيم...`);
-    toCheck.forEach(u => { u.status = 'loading'; });
     renderResults();
     for (let i = 0; i < toCheck.length; i++) {
       const u = toCheck[i];
+      u.status = 'loading';
+      renderResults();
       const result = await realCheck(u.name);
-      u.status = result ?? simulateCheck(u.name);
-      u.realApi = result !== null;
+      if (result === 'ratelimit') {
+        u.status = 'idle';
+        renderResults();
+        showToast('⛔ وصلت الليميت — انتظر قبل تكمل');
+        return;
+      }
+      u.status = result !== null ? result : 'unknown';
       stats.checked++;
       if (u.status === 'free') stats.free++;
-      else stats.taken++;
+      else if (u.status === 'taken') stats.taken++;
       updateStats();
       renderResults();
-      await new Promise(r => setTimeout(r, 350));
+      await new Promise(r => setTimeout(r, 400));
     }
     showToast('تم التحقق من الكل ✓');
   }
@@ -914,22 +977,35 @@
     txt.textContent = `جاري التحقق من "${val}"...`;
 
     const result = await realCheck(val);
-    const status = result ?? simulateCheck(val);
-    const isReal = result !== null;
+
+    if (result === 'ratelimit') {
+      const secs = Math.ceil((rateLimitUntil - Date.now()) / 1000);
+      res.className = 'check-result invalid show';
+      icon.textContent = '⛔';
+      txt.textContent = `وصلت الليميت — انتظر ${secs > 0 ? secs : '...'} ثانية`;
+      return;
+    }
+
+    if (result === null) {
+      res.className = 'check-result invalid show';
+      icon.textContent = '⚠️';
+      txt.textContent = `تعذّر التحقق من "${val}" — جرب لاحقاً`;
+      return;
+    }
 
     stats.checked++;
-    if (status === 'free') stats.free++;
+    if (result === 'free') stats.free++;
     else stats.taken++;
     updateStats();
 
-    if (status === 'free') {
+    if (result === 'free') {
       res.className = 'check-result free show';
       icon.textContent = '✅';
-      txt.textContent = `"${val}" متاح! ${isReal ? '(تحقق حقيقي ✓)' : '(تقريبي)'}`;
+      txt.textContent = `"${val}" متاح!`;
     } else {
       res.className = 'check-result taken show';
       icon.textContent = '❌';
-      txt.textContent = `"${val}" مستعمل ${isReal ? '(تحقق حقيقي ✓)' : '(تقريبي)'}`;
+      txt.textContent = `"${val}" مستعمل`;
     }
   }
 
